@@ -1,0 +1,595 @@
+/* FitVais — sistema visivo: ghisa, quattro dischi, telaio d'acciaio.
+   Nessun contenitore con bordo e angoli arrotondati: il dispositivo è la barra. */
+
+:root {
+  /* Fondo e superfici */
+  --ghisa: #262523;
+  --superficie: #32302C;
+  --divisore: #46423B;
+  --gesso: #F2EFE8;
+  --gesso-secondario: #9C9589;
+
+  /* Dischi da competizione */
+  --blu: #4C86FF;      /* ciò che si tocca e ciò che è in corso */
+  --giallo: #FFC21A;   /* i record */
+  --verde: #3ECB8B;    /* ciò che è concluso */
+  --rosso: #EE5A4C;    /* cali, regressioni, errori */
+
+  /* Telaio */
+  --acciaio: #C9C3B6;
+
+  --altezza-barra: 5px;
+  --raggio: 3px;
+  --tocco: 44px;
+
+  --su: env(safe-area-inset-top, 0px);
+  --giu: env(safe-area-inset-bottom, 0px);
+  --sx: env(safe-area-inset-left, 0px);
+  --dx: env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ghisa);
+  color: var(--gesso);
+}
+
+body {
+  font-family: 'Chivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100vh;
+  padding-left: var(--sx);
+  padding-right: var(--dx);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, p, ul, ol { margin: 0; }
+ul { list-style: none; padding: 0; }
+
+/* ---------- Telaio: la barra ---------- */
+
+.barra {
+  height: var(--altezza-barra);
+  width: 100%;
+  background: var(--acciaio);
+}
+.barra-blu { background: var(--blu); }
+.barra-verde { background: var(--verde); }
+
+/* ---------- Intestazione ---------- */
+
+.intestazione {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--ghisa);
+  padding-top: var(--su);
+}
+
+.marchio {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+}
+
+.marchio-nome {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- Schermate ---------- */
+
+main {
+  padding: 0 16px calc(180px + var(--giu));
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 190px);
+}
+
+.schermata { display: none; }
+.schermata.attiva { display: flex; flex-direction: column; flex: 1; }
+
+/* Il corpo di ogni schermata è una colonna: le azioni scendono in fondo,
+   nella metà bassa dello schermo, dove arriva il pollice. */
+.schermata > div { display: flex; flex-direction: column; flex: 1; }
+
+.titolo-schermata {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 18px 0 10px;
+}
+
+.sezione { margin-top: 26px; }
+
+.etichetta {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gesso-secondario);
+  margin-bottom: 8px;
+}
+
+.testo-secondario { color: var(--gesso-secondario); }
+.testo-verde { color: var(--verde); }
+.testo-rosso { color: var(--rosso); }
+
+.vuoto {
+  color: var(--gesso-secondario);
+  padding: 10px 0 2px;
+  max-width: 34em;
+}
+
+/* ---------- Numeri ---------- */
+
+.numero {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.numero-grande { font-size: 34px; line-height: 1; }
+.numero-carico { font-size: 30px; line-height: 1; }
+
+.blocco-record {
+  background: var(--giallo);
+  color: var(--ghisa);
+  padding: 2px 8px 3px;
+  display: inline-block;
+}
+
+/* ---------- Pulsanti ---------- */
+
+button {
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--gesso);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pulsante {
+  display: block;
+  width: 100%;
+  min-height: var(--tocco);
+  padding: 13px 16px;
+  border-radius: var(--raggio);
+  border: 1px solid var(--divisore);
+  background: var(--superficie);
+  color: var(--gesso);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pulsante-principale {
+  background: var(--blu);
+  color: var(--ghisa);
+  border-color: var(--blu);
+  font-weight: 700;
+}
+
+.pulsante-concluso {
+  background: var(--verde);
+  color: var(--ghisa);
+  border-color: var(--verde);
+  font-weight: 700;
+}
+
+/* Un solo riempimento pieno per schermata: col timer acceso il pulsante si svuota. */
+body.timer-acceso .pulsante-principale {
+  background: transparent;
+  color: var(--blu);
+  border-color: var(--blu);
+}
+body.timer-acceso .pulsante-concluso {
+  background: transparent;
+  color: var(--verde);
+  border-color: var(--verde);
+}
+
+.pulsante-testo {
+  min-height: var(--tocco);
+  padding: 10px 0;
+  color: var(--gesso-secondario);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.pulsante-testo-blu { color: var(--blu); }
+
+.riga-pulsanti {
+  display: flex;
+  gap: 10px;
+}
+.riga-pulsanti .pulsante { flex: 1; }
+
+/* ---------- Campi ---------- */
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--gesso);
+  background: var(--superficie);
+  border: 1px solid var(--divisore);
+  border-radius: var(--raggio);
+  padding: 11px 12px;
+  width: 100%;
+  min-height: var(--tocco);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--blu);
+}
+
+textarea { resize: vertical; min-height: 84px; line-height: 1.4; }
+
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.campo { margin-bottom: 12px; }
+.campo label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gesso-secondario);
+  margin-bottom: 6px;
+}
+
+/* ---------- Oggi: esercizi e serie ---------- */
+
+.esercizio { margin-bottom: 30px; }
+
+.esercizio-testa {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.titolo-programma {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.esercizio-nome {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.esercizio-target {
+  font-size: 13px;
+  color: var(--gesso-secondario);
+  white-space: nowrap;
+}
+
+.serie {
+  display: grid;
+  grid-template-columns: 22px 1fr 18px 1fr var(--tocco);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--divisore);
+}
+
+.serie-numero {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 18px;
+  color: var(--gesso-secondario);
+}
+
+.serie input {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  padding: 6px 8px;
+  text-align: center;
+  min-height: 48px;
+}
+
+.serie-per {
+  text-align: center;
+  color: var(--gesso-secondario);
+  font-size: 15px;
+}
+
+/* Spunta: unico elemento animato dell'app */
+.spunta {
+  width: var(--tocco);
+  height: var(--tocco);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.spunta-cerchio {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--gesso-secondario);
+  position: relative;
+  overflow: hidden;
+}
+
+.spunta-cerchio::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: var(--blu);
+  transform: scale(0);
+  transition: transform 140ms linear;
+}
+
+.spunta.fatta .spunta-cerchio { border-color: var(--blu); }
+.spunta.fatta .spunta-cerchio::before { transform: scale(1); }
+
+.spunta.fatta .spunta-cerchio::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 3px;
+  width: 6px;
+  height: 12px;
+  border-right: 2px solid var(--ghisa);
+  border-bottom: 2px solid var(--ghisa);
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spunta-cerchio::before { transition: none; }
+}
+
+/* ---------- Righe elenco ---------- */
+
+.riga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--divisore);
+  min-height: var(--tocco);
+  text-align: left;
+  width: 100%;
+}
+
+.riga-titolo { font-size: 16px; }
+.riga-dettaglio { font-size: 13px; color: var(--gesso-secondario); }
+
+.voce-giornata {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--divisore);
+  min-height: var(--tocco);
+}
+
+.voce-giornata .nome {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ---------- Riepilogo volume ---------- */
+
+.riepilogo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0 16px;
+}
+
+/* ---------- Timer di recupero ---------- */
+
+.timer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(66px + var(--giu));
+  z-index: 25;
+  background: var(--blu);
+  color: var(--ghisa);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  padding-left: calc(16px + var(--sx));
+  padding-right: calc(16px + var(--dx));
+}
+
+.timer[hidden] { display: none; }
+
+.timer-tempo {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 40px;
+  line-height: 1;
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer button {
+  color: var(--ghisa);
+  border: 1px solid var(--ghisa);
+  border-radius: var(--raggio);
+  padding: 10px 12px;
+  min-height: var(--tocco);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* ---------- Navigazione ---------- */
+
+.navigazione {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--ghisa);
+  border-top: 1px solid var(--divisore);
+  padding-bottom: var(--giu);
+  padding-left: var(--sx);
+  padding-right: var(--dx);
+}
+
+.voce-nav {
+  min-height: var(--tocco);
+  padding: 14px 4px 12px;
+  color: var(--gesso-secondario);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.voce-nav.attiva { color: var(--gesso); }
+
+.voce-nav.attiva::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--altezza-barra);
+  background: var(--acciaio);
+}
+
+/* ---------- Grafici ---------- */
+
+.grafico { width: 100%; height: auto; display: block; margin: 6px 0 4px; }
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--gesso-secondario);
+  margin-top: 4px;
+}
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 14px; height: var(--altezza-barra); display: inline-block; }
+
+.selettore {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin-bottom: 8px;
+  scrollbar-width: none;
+}
+.selettore::-webkit-scrollbar { display: none; }
+
+.voce-selettore {
+  white-space: nowrap;
+  padding: 12px 0 10px;
+  min-height: var(--tocco);
+  color: var(--gesso-secondario);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.voce-selettore.attiva { color: var(--gesso); }
+.voce-selettore.attiva::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--altezza-barra);
+  background: var(--acciaio);
+}
+
+/* ---------- Impostazioni ---------- */
+
+.pannello {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--ghisa);
+  overflow-y: auto;
+  padding: calc(16px + var(--su)) calc(16px + var(--dx)) calc(40px + var(--giu)) calc(16px + var(--sx));
+}
+
+.pannello[hidden] { display: none; }
+
+/* ---------- Coach ---------- */
+
+.risposta {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  padding: 12px 0 4px;
+  max-width: 38em;
+}
+
+/* ---------- Avviso di aggiornamento ---------- */
+
+.avviso {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(66px + var(--giu));
+  z-index: 35;
+  background: var(--superficie);
+  border-top: 1px solid var(--divisore);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  padding-left: calc(16px + var(--sx));
+  padding-right: calc(16px + var(--dx));
+  font-size: 14px;
+}
+
+.avviso[hidden] { display: none; }
+
+.avviso button {
+  border: 1px solid var(--blu);
+  color: var(--blu);
+  border-radius: var(--raggio);
+  padding: 10px 14px;
+  min-height: var(--tocco);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nascosto { display: none !important; }
+
+/* Le azioni scendono in fondo alla schermata (dopo .sezione, così vince su quella regola). */
+.sezione.azioni-fondo,
+.azioni-fondo { margin-top: auto; padding-top: 28px; }

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FitVais</title>
+<meta name="description" content="Registro di allenamenti di forza. Offline, senza account.">
+<meta name="theme-color" content="#262523">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FitVais">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icona-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icona-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700&display=swap">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+
+<header class="intestazione">
+  <div class="marchio">
+    <span class="marchio-nome">FitVais</span>
+    <button type="button" class="pulsante-testo" id="apri-impostazioni">Impostazioni</button>
+  </div>
+  <div class="barra"></div>
+</header>
+
+<main>
+  <section class="schermata attiva" id="schermata-oggi" aria-labelledby="titolo-oggi">
+    <h1 class="titolo-schermata" id="titolo-oggi">Oggi</h1>
+    <div id="corpo-oggi"></div>
+  </section>
+
+  <section class="schermata" id="schermata-scheda" aria-labelledby="titolo-scheda">
+    <h1 class="titolo-schermata" id="titolo-scheda">Scheda</h1>
+    <div id="corpo-scheda"></div>
+  </section>
+
+  <section class="schermata" id="schermata-curve" aria-labelledby="titolo-curve">
+    <h1 class="titolo-schermata" id="titolo-curve">Curve</h1>
+    <div id="corpo-curve"></div>
+  </section>
+
+  <section class="schermata" id="schermata-coach" aria-labelledby="titolo-coach">
+    <h1 class="titolo-schermata" id="titolo-coach">Coach</h1>
+    <div id="corpo-coach"></div>
+  </section>
+</main>
+
+<div class="timer" id="timer" hidden>
+  <span class="timer-tempo" id="timer-tempo" aria-live="off">0:00</span>
+  <button type="button" id="timer-piu">+30 s</button>
+  <button type="button" id="timer-salta">Salta</button>
+</div>
+
+<div class="avviso" id="avviso-aggiornamento" hidden>
+  <span>Versione nuova disponibile.</span>
+  <button type="button" id="ricarica">Ricarica</button>
+</div>
+
+<nav class="navigazione" id="navigazione">
+  <button type="button" class="voce-nav attiva" data-schermata="oggi">Oggi</button>
+  <button type="button" class="voce-nav" data-schermata="scheda">Scheda</button>
+  <button type="button" class="voce-nav" data-schermata="curve">Curve</button>
+  <button type="button" class="voce-nav" data-schermata="coach">Coach</button>
+</nav>
+
+<div class="pannello" id="pannello-impostazioni" hidden>
+  <h2 class="titolo-schermata">Impostazioni</h2>
+  <div class="barra"></div>
+  <div id="corpo-impostazioni"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
