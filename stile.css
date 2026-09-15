@@ -564,18 +564,47 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   background: var(--acciaio);
 }
 
-/* ---------- Impostazioni ---------- */
+/* ---------- Pannelli ---------- */
+
+.titolo-pannello {
+  font-family: 'Anton', 'Chivo', sans-serif;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 6px 0 10px;
+}
+
+button.nome-toccabile {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: var(--gesso);
+  text-align: left;
+  display: block;
+}
+
+.riga-azioni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 
 .pannello {
   position: fixed;
   inset: 0;
   z-index: 40;
+  display: flex;
+  flex-direction: column;
   background: var(--ghisa);
   overflow-y: auto;
   padding: calc(16px + var(--su)) calc(16px + var(--dx)) calc(40px + var(--giu)) calc(16px + var(--sx));
 }
 
 .pannello[hidden] { display: none; }
+.pannello > div { display: flex; flex-direction: column; flex: 1; }
 
 /* ---------- Coach ---------- */
 
@@ -585,6 +614,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   padding: 12px 0 4px;
   max-width: 38em;
 }
+
+.sezione-spiegazione .etichetta { margin-top: 22px; }
+.sezione-spiegazione > .etichetta:first-child { margin-top: 0; }
 
 /* ---------- Avviso di aggiornamento ---------- */
 

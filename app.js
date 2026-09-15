@@ -94,6 +94,7 @@ function statoIniziale() {
     sessioni: [],
     impostazioni: { chiaveApi: '', modello: 'claude-sonnet-5' },
     coach: { testo: '', data: null },
+    spiegazioni: {},
     ultimaChiusura: null
   };
 }
@@ -115,6 +116,7 @@ function carica() {
     stato = Object.assign(statoIniziale(), letto);
     stato.impostazioni = Object.assign({ chiaveApi: '', modello: 'claude-sonnet-5' }, letto.impostazioni || {});
     stato.coach = Object.assign({ testo: '', data: null }, letto.coach || {});
+    if (!stato.spiegazioni || typeof stato.spiegazioni !== 'object') stato.spiegazioni = {};
     if (!Array.isArray(stato.programmi)) stato.programmi = [];
     if (!Array.isArray(stato.sessioni)) stato.sessioni = [];
   } catch (errore) {
@@ -636,7 +638,7 @@ function disegnaEsercizio(esercizio) {
   const testa = elemento('div', 'esercizio-testa');
   const sinistra = elemento('div');
   if (esercizio.gruppo) sinistra.appendChild(elemento('div', 'etichetta-gruppo', esercizio.gruppo));
-  sinistra.appendChild(elemento('span', 'esercizio-nome', esercizio.nome));
+  sinistra.appendChild(nomeToccabile(esercizio));
   testa.appendChild(sinistra);
   testa.appendChild(destraEsercizio(esercizio));
   blocco.appendChild(testa);
@@ -652,6 +654,7 @@ function disegnaEsercizio(esercizio) {
     blocco.appendChild(disegnaSerie(esercizio, serie, indice, record.valore));
   });
 
+  const azioniEsercizio = elemento('div', 'riga-azioni');
   const aggiungi = elemento('button', 'pulsante-testo pulsante-testo-blu', 'Aggiungi serie');
   aggiungi.type = 'button';
   aggiungi.addEventListener('click', function () {
@@ -664,7 +667,9 @@ function disegnaEsercizio(esercizio) {
     salva();
     disegnaOggi();
   });
-  blocco.appendChild(aggiungi);
+  azioniEsercizio.appendChild(aggiungi);
+  azioniEsercizio.appendChild(pulsanteSpiega(esercizio));
+  blocco.appendChild(azioniEsercizio);
 
   // Confronto con l'ultima volta: cala, uguaglia, supera.
   const precedenti = ultimeSerie(esercizio.nome);
@@ -695,6 +700,22 @@ function disegnaEsercizio(esercizio) {
   }
 
   return blocco;
+}
+
+// Il nome è toccabile: apre la scheda che spiega l'esercizio.
+function nomeToccabile(esercizio) {
+  const nome = elemento('button', 'esercizio-nome nome-toccabile', esercizio.nome);
+  nome.type = 'button';
+  nome.setAttribute('aria-label', 'Spiega ' + esercizio.nome);
+  nome.addEventListener('click', function () { apriSpiegazione(esercizio); });
+  return nome;
+}
+
+function pulsanteSpiega(esercizio) {
+  const spiega = elemento('button', 'pulsante-testo pulsante-testo-blu', 'Spiega');
+  spiega.type = 'button';
+  spiega.addEventListener('click', function () { apriSpiegazione(esercizio); });
+  return spiega;
 }
 
 // A destra del nome: la prescrizione, come dettata.
@@ -956,7 +977,7 @@ function disegnaEsercizioScheda(giornata, esercizio) {
   const testa = elemento('div', 'esercizio-testa');
   const sinistra = elemento('div');
   if (esercizio.gruppo) sinistra.appendChild(elemento('div', 'etichetta-gruppo', esercizio.gruppo));
-  sinistra.appendChild(elemento('span', 'esercizio-nome', esercizio.nome));
+  sinistra.appendChild(nomeToccabile(esercizio));
   testa.appendChild(sinistra);
   testa.appendChild(destraEsercizio(esercizio));
   blocco.appendChild(testa);
@@ -994,6 +1015,8 @@ function disegnaEsercizioScheda(giornata, esercizio) {
   });
   blocco.appendChild(griglia);
 
+  const azioniEsercizio = elemento('div', 'riga-azioni');
+  azioniEsercizio.appendChild(pulsanteSpiega(esercizio));
   const elimina = elemento('button', 'pulsante-testo', 'Elimina esercizio');
   elimina.type = 'button';
   elimina.addEventListener('click', function () {
@@ -1001,7 +1024,8 @@ function disegnaEsercizioScheda(giornata, esercizio) {
     salva();
     disegnaScheda();
   });
-  blocco.appendChild(elimina);
+  azioniEsercizio.appendChild(elimina);
+  blocco.appendChild(azioniEsercizio);
 
   return blocco;
 }
@@ -1302,28 +1326,32 @@ function costruisciPrompt(dati) {
   ].join('\n');
 }
 
-async function chiediAlCoach() {
+// Unica porta verso l'API: la usano sia Davemaxxer sia le spiegazioni.
+async function chiamataAnthropic(messaggio, tettoToken) {
   const chiave = (stato.impostazioni.chiaveApi || '').trim();
   const modello = (stato.impostazioni.modello || 'claude-sonnet-5').trim();
-  const dati = riassuntoSessioni(14);
 
   if (!chiave) throw new Error('Manca la chiave API. Inseriscila nelle impostazioni.');
-  if (!dati.length) throw new Error('Nessun allenamento chiuso da analizzare.');
 
-  const risposta = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': chiave,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: modello,
-      max_tokens: 1200,
-      messages: [{ role: 'user', content: costruisciPrompt(dati) }]
-    })
-  });
+  let risposta;
+  try {
+    risposta = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': chiave,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: modello,
+        max_tokens: tettoToken || 1200,
+        messages: [{ role: 'user', content: messaggio }]
+      })
+    });
+  } catch (errore) {
+    throw new Error('Nessuna rete. Riprova quando sei online.');
+  }
 
   if (!risposta.ok) {
     let dettaglio = '';
@@ -1342,6 +1370,12 @@ async function chiediAlCoach() {
     .trim();
 
   return testo || 'Risposta vuota.';
+}
+
+async function chiediAlCoach() {
+  const dati = riassuntoSessioni(14);
+  if (!dati.length) throw new Error('Nessun allenamento chiuso da analizzare.');
+  return chiamataAnthropic(costruisciPrompt(dati), 1200);
 }
 
 function disegnaCoach() {
@@ -1403,6 +1437,133 @@ function disegnaCoach() {
     'La chiamata parte dal telefono e usa la tua chiave. Modello: ' + (stato.impostazioni.modello || 'claude-sonnet-5') + '.');
   azioni.appendChild(nota);
   corpo.appendChild(azioni);
+}
+
+/* ---------- Spiegazione dell'esercizio ---------- */
+
+const ETICHETTE_SPIEGAZIONE = ['Come si esegue', 'Cosa lavora', 'Errori tipici', 'Il carico'];
+
+function chiaveSpiegazione(nome) {
+  return String(nome || '').trim().toLowerCase();
+}
+
+function promptSpiegazione(esercizio) {
+  const righe = ['Spieghi un esercizio di sala pesi a chi lo deve fare oggi.', ''];
+  righe.push('Esercizio: ' + esercizio.nome + '.');
+  if (esercizio.gruppo) righe.push('Gruppo muscolare indicato dalla scheda: ' + esercizio.gruppo + '.');
+  if (esercizio.schema) righe.push('Prescrizione della scheda: ' + esercizio.schema + '.');
+  if (esercizio.recuperoTesto) righe.push('Recupero previsto: ' + esercizio.recuperoTesto + '.');
+  if (esercizio.nota) righe.push('Indicazione della scheda: ' + esercizio.nota);
+  righe.push(
+    '',
+    'Rispondi in italiano, in seconda persona, imperativo, senza entusiasmo e senza complimenti.',
+    'Esattamente quattro paragrafi separati da una riga vuota, in questo ordine, senza intestazioni,',
+    'senza elenchi, senza trattini, senza simboli, senza emoji, massimo novanta parole ciascuno:',
+    '',
+    'Primo: come si esegue. Posizione di partenza, movimento, respirazione, ritmo.',
+    'Secondo: cosa lavora. Muscoli principali e secondari.',
+    'Terzo: gli errori tipici e come li correggi.',
+    'Quarto: come scegli il carico per la prescrizione qui sopra e da cosa capisci che è giusto.',
+    '',
+    'Se non riconosci l\u2019esercizio con questo nome, scrivi "esercizio non riconosciuto" nel primo',
+    'paragrafo e fermati lì. Non inventare varianti che non esistono.'
+  );
+  return righe.join('\n');
+}
+
+let esercizioSpiegato = null;
+
+function apriSpiegazione(esercizio) {
+  esercizioSpiegato = esercizio;
+  disegnaSpiegazione();
+  $('#pannello-spiegazione').hidden = false;
+  window.scrollTo(0, 0);
+}
+
+function chiudiSpiegazione() {
+  $('#pannello-spiegazione').hidden = true;
+  esercizioSpiegato = null;
+}
+
+function disegnaSpiegazione(inCorso, errore) {
+  const esercizio = esercizioSpiegato;
+  if (!esercizio) return;
+  const corpo = $('#corpo-spiegazione');
+  svuota(corpo);
+
+  const titolo = elemento('h2', 'titolo-pannello', esercizio.nome);
+  corpo.appendChild(titolo);
+  corpo.appendChild(elemento('div', 'barra'));
+
+  const contesto = [];
+  if (esercizio.gruppo) contesto.push(esercizio.gruppo);
+  if (esercizio.schema) contesto.push(esercizio.schema);
+  if (esercizio.recuperoTesto) contesto.push('rec. ' + esercizio.recuperoTesto.toLowerCase());
+  if (contesto.length) corpo.appendChild(elemento('p', 'nota-esercizio', contesto.join(' · ')));
+
+  const salvata = stato.spiegazioni[chiaveSpiegazione(esercizio.nome)];
+
+  if (salvata && salvata.testo) {
+    const paragrafi = salvata.testo.split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+    const sezione = elemento('div', 'sezione sezione-spiegazione');
+    if (paragrafi.length === ETICHETTE_SPIEGAZIONE.length) {
+      paragrafi.forEach(function (paragrafo, indice) {
+        sezione.appendChild(elemento('p', 'etichetta', ETICHETTE_SPIEGAZIONE[indice]));
+        sezione.appendChild(elemento('p', 'risposta', paragrafo));
+      });
+    } else {
+      sezione.appendChild(elemento('div', 'risposta', salvata.testo));
+    }
+    corpo.appendChild(sezione);
+    corpo.appendChild(elemento('p', 'nota-esercizio',
+      'Spiegazione del ' + dataEstesa(salvata.data) + '. Indicazioni generali: interrompi se compare dolore.'));
+  } else if (!inCorso) {
+    corpo.appendChild(elemento('p', 'vuoto',
+      (stato.impostazioni.chiaveApi || '').trim()
+        ? 'Non l\u2019hai ancora chiesta. Serve la rete solo la prima volta: dopo resta sul telefono.'
+        : 'Manca la chiave API. Inseriscila nelle impostazioni.'));
+  }
+
+  if (inCorso) corpo.appendChild(elemento('p', 'vuoto', 'In corso.'));
+  if (errore) corpo.appendChild(elemento('p', 'riga-dettaglio testo-rosso', errore));
+
+  const azioni = elemento('div', 'azioni-fondo');
+
+  if (!(stato.impostazioni.chiaveApi || '').trim()) {
+    const apri = elemento('button', 'pulsante', 'Apri impostazioni');
+    apri.type = 'button';
+    apri.addEventListener('click', function () {
+      chiudiSpiegazione();
+      apriImpostazioni();
+    });
+    azioni.appendChild(apri);
+  } else {
+    const chiedi = elemento('button', 'pulsante pulsante-principale', salvata ? 'Rifai la spiegazione' : 'Spiega');
+    chiedi.type = 'button';
+    chiedi.disabled = !!inCorso;
+    chiedi.addEventListener('click', function () { generaSpiegazione(esercizio); });
+    azioni.appendChild(chiedi);
+  }
+
+  const chiudi = elemento('button', 'pulsante', 'Chiudi');
+  chiudi.type = 'button';
+  chiudi.style.marginTop = '10px';
+  chiudi.addEventListener('click', chiudiSpiegazione);
+  azioni.appendChild(chiudi);
+
+  corpo.appendChild(azioni);
+}
+
+async function generaSpiegazione(esercizio) {
+  disegnaSpiegazione(true);
+  try {
+    const testo = await chiamataAnthropic(promptSpiegazione(esercizio), 900);
+    stato.spiegazioni[chiaveSpiegazione(esercizio.nome)] = { testo: testo, data: new Date().toISOString() };
+    salva();
+    disegnaSpiegazione();
+  } catch (problema) {
+    disegnaSpiegazione(false, problema.message);
+  }
 }
 
 /* ---------- Impostazioni ---------- */

@@ -8,6 +8,16 @@ riportata come nel PDF originale: dove la prescrizione non c'era, l'app scrive
 volta; dalla seconda in poi i campi arrivano già pieni con l'ultima volta.
 Se cancelli il programma, in Scheda trovi il pulsante per rimetterlo.
 
+## Spiegazione degli esercizi
+
+Tocca il nome di un esercizio, in Oggi o in Scheda, e si apre una scheda che lo
+spiega: come si esegue, cosa lavora, gli errori tipici e come scegliere il
+carico per la prescrizione di quel giorno. La chiede all'API di Anthropic con la
+stessa chiave del Coach.
+
+Serve la rete solo la prima volta: la spiegazione resta sul telefono, si riapre
+offline e non la paghi due volte. "Rifai la spiegazione" ne chiede una nuova.
+
 ## Metterla online
 
 Due strade. La prima non richiede il computer.
