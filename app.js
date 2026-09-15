@@ -319,6 +319,26 @@ function disegna() {
 
 const recupero = { restanti: 0, riferimento: 0, intervallo: null, nome: '' };
 
+// Durante il recupero lo schermo resta acceso: il timer si vede senza toccare nulla.
+let sentinellaSchermo = null;
+
+function tieniAccesoSchermo() {
+  if (!('wakeLock' in navigator) || sentinellaSchermo) return;
+  navigator.wakeLock.request('screen').then(function (sentinella) {
+    sentinellaSchermo = sentinella;
+    sentinella.addEventListener('release', function () { sentinellaSchermo = null; });
+  }).catch(function () {
+    // Non è essenziale: se il telefono dice di no, il timer funziona lo stesso.
+  });
+}
+
+function lasciaSpegnereSchermo() {
+  if (!sentinellaSchermo) return;
+  const sentinella = sentinellaSchermo;
+  sentinellaSchermo = null;
+  sentinella.release().catch(function () {});
+}
+
 function avviaRecupero(secondi, nome) {
   const durata = Number(secondi) > 0 ? Number(secondi) : 90;
   recupero.restanti = durata;
@@ -328,6 +348,7 @@ function avviaRecupero(secondi, nome) {
   recupero.intervallo = setInterval(passoRecupero, 250);
   document.body.classList.add('timer-acceso');
   $('#timer').hidden = false;
+  tieniAccesoSchermo();
   aggiornaTimer();
 }
 
@@ -348,11 +369,15 @@ function fermaRecupero() {
   recupero.restanti = 0;
   document.body.classList.remove('timer-acceso');
   $('#timer').hidden = true;
+  lasciaSpegnereSchermo();
 }
 
 function fineRecupero() {
-  suona();
-  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  // Se il tempo è scaduto mentre l'app era chiusa, suonare adesso sarebbe in ritardo.
+  if (document.visibilityState === 'visible') {
+    suona();
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }
   fermaRecupero();
 }
 
@@ -1778,6 +1803,13 @@ function avvia() {
     passoRecupero();
   });
   $('#timer-salta').addEventListener('click', fermaRecupero);
+
+  // Tornando all'app il conto si rifà sull'orologio, non sui tic persi.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || !recupero.intervallo) return;
+    tieniAccesoSchermo();
+    passoRecupero();
+  });
 
   mostraSchermata('oggi');
   registraServiceWorker();
