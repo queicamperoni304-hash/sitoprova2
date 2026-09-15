@@ -1258,7 +1258,7 @@ function disegnaCurve() {
   corpo.appendChild(sezioneRecord);
 }
 
-/* ---------- Coach ---------- */
+/* ---------- Davemaxxer, il coach ---------- */
 
 function riassuntoSessioni(quante) {
   return sessioniChiuse().slice(-quante).map(function (sessione) {
@@ -1283,7 +1283,8 @@ function riassuntoSessioni(quante) {
 
 function costruisciPrompt(dati) {
   return [
-    'Sei un allenatore di forza. Analizzi i dati di allenamento qui sotto, in JSON.',
+    'Ti chiami Davemaxxer e sei un allenatore di forza. Non presentarti e non firmare la risposta.',
+    'Analizzi i dati di allenamento qui sotto, in JSON.',
     'Le sessioni sono in ordine cronologico. Il massimale stimato usa la formula di Epley.',
     '',
     'Rispondi in italiano, in seconda persona, imperativo, senza entusiasmo e senza complimenti.',

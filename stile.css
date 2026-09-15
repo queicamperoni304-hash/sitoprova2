@@ -189,6 +189,14 @@ button {
   font-weight: 700;
 }
 
+/* Un pulsante spento non è blu: il blu è ciò che si tocca. */
+.pulsante:disabled {
+  background: transparent;
+  color: var(--gesso-secondario);
+  border-color: var(--divisore);
+  font-weight: 400;
+}
+
 /* Un solo riempimento pieno per schermata: col timer acceso il pulsante si svuota. */
 body.timer-acceso .pulsante-principale {
   background: transparent;
@@ -473,7 +481,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--ghisa);
   border-top: 1px solid var(--divisore);
   padding-bottom: var(--giu);
@@ -483,12 +491,18 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 
 .voce-nav {
   min-height: var(--tocco);
-  padding: 14px 4px 12px;
+  padding: 14px 2px 12px;
   color: var(--gesso-secondario);
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
   position: relative;
+}
+
+/* Schermi stretti: la voce più lunga deve stare nella sua colonna. */
+@media (max-width: 374px) {
+  .voce-nav { font-size: 10px; letter-spacing: 0.01em; }
 }
 
 .voce-nav.attiva { color: var(--gesso); }
