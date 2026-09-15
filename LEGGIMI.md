@@ -43,6 +43,26 @@ Senza il passo 2 il telefono continua a servire la versione vecchia dalla cache.
 Dopo il passo 3, sul telefono compare in basso "Versione nuova disponibile" con
 il pulsante Ricarica.
 
+Gli aggiornamenti non toccano i dati: il codice e gli allenamenti stanno in due
+posti diversi del telefono. Nemmeno reinstallare l'icona li cancella.
+
+La scheda predefinita si carica solo la prima volta. Se cambi
+`scheda-5-giorni.js`, i telefoni che hanno già dei dati continuano a tenersi la
+versione vecchia: per prendere quella nuova, elimina il programma da Scheda e
+usa il pulsante "Carica la scheda 5 giorni" che compare al suo posto.
+
+## Darla a un amico
+
+Mandagli l'indirizzo. Stessa app, stesso link, ma i dati stanno nel telefono di
+chi la usa: lui vede i suoi allenamenti, tu i tuoi, e nessuno dei due vede
+quelli dell'altro. Non c'è un server in mezzo, non ci sono account.
+
+Anche lui si troverà dentro la Scheda 5 giorni: se non gli serve, la elimina da
+Scheda e si costruisce la sua.
+
+Per il Coach serve una chiave API sua. Se gli passi la tua, le sue richieste le
+paghi tu.
+
 ## I dati
 
 Stanno solo nella memoria del browser di questo telefono. Nessun server, nessun
