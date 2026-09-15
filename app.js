@@ -105,7 +105,11 @@ let esercizioCurve = null;
 function carica() {
   try {
     const grezzo = localStorage.getItem(CHIAVE_DATI);
-    if (!grezzo) return;
+    if (!grezzo) {
+      // Primo avvio: la scheda 5 giorni è già dentro.
+      caricaSchedaPredefinita();
+      return;
+    }
     const letto = JSON.parse(grezzo);
     if (!letto || typeof letto !== 'object') return;
     stato = Object.assign(statoIniziale(), letto);
@@ -125,6 +129,58 @@ function salva() {
   } catch (errore) {
     console.warn('Salvataggio non riuscito.', errore);
   }
+}
+
+/* ---------- Scheda predefinita ---------- */
+
+// Costruisce un programma dal modello in scheda-5-giorni.js, con id propri.
+function creaProgrammaDaModello(modello) {
+  return {
+    id: nuovoId(),
+    nome: modello.nome,
+    settimana: modello.settimana || '',
+    legenda: modello.legenda || '',
+    giornate: (modello.giornate || []).map(function (giornata) {
+      return {
+        id: nuovoId(),
+        nome: giornata.nome,
+        titolo: giornata.titolo || '',
+        descrizione: giornata.descrizione || '',
+        nota: giornata.nota || '',
+        esercizi: (giornata.esercizi || []).map(function (esercizio) {
+          return {
+            id: nuovoId(),
+            gruppo: esercizio.gruppo || '',
+            nome: esercizio.nome,
+            schema: esercizio.schema || '',
+            serie: Number(esercizio.serie) || 0,
+            ripetizioni: Number(esercizio.ripetizioni) || 0,
+            recupero: Number(esercizio.recupero) || 0,
+            recuperoTesto: esercizio.recuperoTesto || '',
+            nota: esercizio.nota || ''
+          };
+        })
+      };
+    })
+  };
+}
+
+function modelloDisponibile() {
+  return typeof window !== 'undefined' && window.SCHEDA_5_GIORNI;
+}
+
+function schedaGiaCaricata() {
+  if (!modelloDisponibile()) return true;
+  return stato.programmi.some(function (p) { return p.nome === window.SCHEDA_5_GIORNI.nome; });
+}
+
+function caricaSchedaPredefinita() {
+  if (!modelloDisponibile()) return null;
+  const programma = creaProgrammaDaModello(window.SCHEDA_5_GIORNI);
+  stato.programmi.push(programma);
+  stato.programmaAttivo = programma.id;
+  salva();
+  return programma;
 }
 
 /* ---------- Calcoli ---------- */
@@ -351,8 +407,12 @@ function avviaSessione(giornata) {
     return {
       id: nuovoId(),
       nome: e.nome,
+      gruppo: e.gruppo || '',
+      schema: e.schema || '',
       recupero: Number(e.recupero) || 90,
-      obiettivoSerie: Number(e.serie) || 3,
+      recuperoTesto: e.recuperoTesto || '',
+      nota: e.nota || '',
+      obiettivoSerie: Number(e.serie) || 0,
       obiettivoRipetizioni: Number(e.ripetizioni) || 0,
       serie: serieIniziali(e.nome, e.serie, e.ripetizioni)
     };
@@ -376,7 +436,11 @@ function aggiungiEsercizioASessione(nome) {
   stato.sessione.esercizi.push({
     id: nuovoId(),
     nome: pulito,
+    gruppo: '',
+    schema: '',
     recupero: 90,
+    recuperoTesto: '',
+    nota: '',
     obiettivoSerie: 3,
     obiettivoRipetizioni: 0,
     serie: serieIniziali(pulito, 3, 0)
@@ -429,8 +493,9 @@ function disegnaAvvio(corpo) {
       voce.type = 'button';
       voce.appendChild(elemento('span', 'nome', giornata.nome));
       const quanti = (giornata.esercizi || []).length;
-      voce.appendChild(elemento('div', 'riga-dettaglio',
-        quanti === 1 ? '1 esercizio' : quanti + ' esercizi'));
+      const dettaglio = [giornata.titolo, quanti === 1 ? '1 esercizio' : quanti + ' esercizi']
+        .filter(function (parte) { return parte; }).join(' · ');
+      voce.appendChild(elemento('div', 'riga-dettaglio', dettaglio));
       voce.addEventListener('click', function () { avviaSessione(giornata); });
       elenco.appendChild(voce);
     });
@@ -569,15 +634,17 @@ function disegnaEsercizio(esercizio) {
   const blocco = elemento('div', 'esercizio');
 
   const testa = elemento('div', 'esercizio-testa');
-  testa.appendChild(elemento('span', 'esercizio-nome', esercizio.nome));
-  const target = [];
-  if (esercizio.obiettivoSerie) target.push(esercizio.obiettivoSerie + '×' + (esercizio.obiettivoRipetizioni || '—'));
-  target.push(formattaNumero(esercizio.recupero) + ' s');
-  testa.appendChild(elemento('span', 'esercizio-target', target.join(' · ')));
+  const sinistra = elemento('div');
+  if (esercizio.gruppo) sinistra.appendChild(elemento('div', 'etichetta-gruppo', esercizio.gruppo));
+  sinistra.appendChild(elemento('span', 'esercizio-nome', esercizio.nome));
+  testa.appendChild(sinistra);
+  testa.appendChild(destraEsercizio(esercizio));
   blocco.appendChild(testa);
 
   // In corso: la barra è blu.
   blocco.appendChild(elemento('div', 'barra barra-blu'));
+
+  blocco.appendChild(sottoBarra(esercizio));
 
   const record = recordEsercizio(esercizio.nome);
 
@@ -628,6 +695,24 @@ function disegnaEsercizio(esercizio) {
   }
 
   return blocco;
+}
+
+// A destra del nome: la prescrizione, come dettata.
+function destraEsercizio(esercizio) {
+  const serie = esercizio.obiettivoSerie || esercizio.serie || 0;
+  const ripetizioni = esercizio.obiettivoRipetizioni || esercizio.ripetizioni || 0;
+  const schema = esercizio.schema ||
+    (serie && ripetizioni ? serie + ' × ' + ripetizioni : 'Da definire');
+  return elemento('span', 'esercizio-target', schema);
+}
+
+// Sotto la barra: recupero e indicazione tecnica, come dettati.
+function sottoBarra(esercizio) {
+  const recupero = esercizio.recuperoTesto ||
+    (Number(esercizio.recupero) ? formattaNumero(esercizio.recupero) + ' s' : 'Da definire');
+  const parti = ['Rec. ' + recupero.toLowerCase()];
+  if (esercizio.nota) parti.push(esercizio.nota);
+  return elemento('p', 'nota-esercizio', parti.join(' · '));
 }
 
 function disegnaSerie(esercizio, serie, indice, record) {
@@ -706,6 +791,20 @@ function disegnaScheda() {
     corpo.appendChild(disegnaProgramma(programma));
   });
 
+  if (!schedaGiaCaricata()) {
+    const ripristino = elemento('div', 'sezione');
+    ripristino.appendChild(elemento('p', 'etichetta', 'Scheda 5 giorni'));
+    ripristino.appendChild(elemento('p', 'vuoto', 'La scheda originale non è caricata.'));
+    const carica = elemento('button', 'pulsante', 'Carica la scheda 5 giorni');
+    carica.type = 'button';
+    carica.addEventListener('click', function () {
+      caricaSchedaPredefinita();
+      disegnaScheda();
+    });
+    ripristino.appendChild(carica);
+    corpo.appendChild(ripristino);
+  }
+
   const nuovo = elemento('div', 'sezione');
   nuovo.appendChild(elemento('p', 'etichetta', 'Nuovo programma'));
   const campo = elemento('div', 'campo');
@@ -750,6 +849,9 @@ function disegnaProgramma(programma) {
   }
   blocco.appendChild(testa);
   blocco.appendChild(elemento('div', 'barra'));
+
+  if (programma.settimana) blocco.appendChild(elemento('p', 'nota-esercizio', 'Settimana: ' + programma.settimana));
+  if (programma.legenda) blocco.appendChild(elemento('p', 'nota-esercizio', programma.legenda));
 
   (programma.giornate || []).forEach(function (giornata) {
     blocco.appendChild(disegnaGiornata(programma, giornata));
@@ -812,6 +914,10 @@ function disegnaGiornata(programma, giornata) {
   testa.appendChild(elimina);
   blocco.appendChild(testa);
 
+  if (giornata.titolo) blocco.appendChild(elemento('p', 'riga-titolo', giornata.titolo));
+  if (giornata.descrizione) blocco.appendChild(elemento('p', 'nota-esercizio', giornata.descrizione));
+  if (giornata.nota) blocco.appendChild(elemento('p', 'nota-esercizio', giornata.nota));
+
   (giornata.esercizi || []).forEach(function (esercizio) {
     blocco.appendChild(disegnaEsercizioScheda(giornata, esercizio));
   });
@@ -848,19 +954,17 @@ function disegnaEsercizioScheda(giornata, esercizio) {
   blocco.style.marginTop = '14px';
 
   const testa = elemento('div', 'esercizio-testa');
-  testa.appendChild(elemento('span', 'esercizio-nome', esercizio.nome));
-  const elimina = elemento('button', 'pulsante-testo', 'Elimina');
-  elimina.type = 'button';
-  elimina.addEventListener('click', function () {
-    giornata.esercizi = giornata.esercizi.filter(function (e) { return e.id !== esercizio.id; });
-    salva();
-    disegnaScheda();
-  });
-  testa.appendChild(elimina);
+  const sinistra = elemento('div');
+  if (esercizio.gruppo) sinistra.appendChild(elemento('div', 'etichetta-gruppo', esercizio.gruppo));
+  sinistra.appendChild(elemento('span', 'esercizio-nome', esercizio.nome));
+  testa.appendChild(sinistra);
+  testa.appendChild(destraEsercizio(esercizio));
   blocco.appendChild(testa);
 
   // Fuori dalla sessione la barra è d'acciaio: è telaio, non è in corso.
   blocco.appendChild(elemento('div', 'barra'));
+
+  blocco.appendChild(sottoBarra(esercizio));
 
   const griglia = elemento('div', 'serie');
   griglia.style.gridTemplateColumns = '1fr 1fr 1fr';
@@ -877,7 +981,9 @@ function disegnaEsercizioScheda(giornata, esercizio) {
     input.className = 'numero';
     input.style.fontSize = '30px';
     input.style.textAlign = 'center';
-    input.value = esercizio[definizione.campo];
+    // Zero significa "da definire": il campo resta vuoto.
+    input.value = Number(esercizio[definizione.campo]) ? esercizio[definizione.campo] : '';
+    input.placeholder = '—';
     input.setAttribute('aria-label', definizione.etichetta + ' ' + esercizio.nome);
     input.addEventListener('input', function () {
       esercizio[definizione.campo] = Number(input.value.replace(',', '.')) || 0;
@@ -887,6 +993,15 @@ function disegnaEsercizioScheda(giornata, esercizio) {
     griglia.appendChild(cella);
   });
   blocco.appendChild(griglia);
+
+  const elimina = elemento('button', 'pulsante-testo', 'Elimina esercizio');
+  elimina.type = 'button';
+  elimina.addEventListener('click', function () {
+    giornata.esercizi = giornata.esercizi.filter(function (e) { return e.id !== esercizio.id; });
+    salva();
+    disegnaScheda();
+  });
+  blocco.appendChild(elimina);
 
   return blocco;
 }

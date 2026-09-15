@@ -2,12 +2,13 @@
    Rete prima, ricaduta sulla cache: online vedi subito le modifiche, offline funziona lo stesso.
    Cambia VERSIONE a ogni pubblicazione: la cache vecchia si cancella. */
 
-const VERSIONE = 'fitvais-1';
+const VERSIONE = 'fitvais-2';
 
 const RISORSE = [
   './',
   './index.html',
   './app.js',
+  './scheda-5-giorni.js',
   './stile.css',
   './manifest.webmanifest',
   './icona-192.png',

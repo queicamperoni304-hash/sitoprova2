@@ -2,6 +2,12 @@
 
 Registro di allenamenti di forza. Funziona offline, i dati restano sul telefono.
 
+Dentro c'è già la Scheda 5 giorni (Lun · Mar · Mer · Gio riposo · Ven · Sab),
+riportata come nel PDF originale: dove la prescrizione non c'era, l'app scrive
+"da definire" invece di inventare un numero. I carichi li scrivi tu la prima
+volta; dalla seconda in poi i campi arrivano già pieni con l'ultima volta.
+Se cancelli il programma, in Scheda trovi il pulsante per rimetterlo.
+
 ## Installare l'app sul telefono
 
 **iPhone.** Apri l'indirizzo con Safari (da Chrome non si può). Tocca il pulsante
