@@ -8,6 +8,21 @@ riportata come nel PDF originale: dove la prescrizione non c'era, l'app scrive
 volta; dalla seconda in poi i campi arrivano già pieni con l'ultima volta.
 Se cancelli il programma, in Scheda trovi il pulsante per rimetterlo.
 
+## Metterla online
+
+Due strade. La prima non richiede il computer.
+
+**GitHub Pages.** Sul repository: Settings, poi Pages nella colonna a sinistra.
+Source "Deploy from a branch", branch `claude/new-session-9umek6`, cartella
+`/ (root)`, Save. Dopo un minuto l'indirizzo compare in cima alla stessa pagina:
+
+    https://queicamperoni304-hash.github.io/sitoprova2/
+
+Da lì in poi ogni push aggiorna il sito da solo.
+
+**Cloudflare Pages.** Dal computer, nella cartella del progetto:
+`npx wrangler login` una volta sola, poi `./deploy.sh`.
+
 ## Installare l'app sul telefono
 
 **iPhone.** Apri l'indirizzo con Safari (da Chrome non si può). Tocca il pulsante
@@ -21,8 +36,8 @@ app". Conferma. L'icona FV compare fra le app.
 ## Aggiornare l'app
 
 1. Modifica i file e salva.
-2. Incrementa la costante `VERSIONE` in cima a `sw.js`: `fitvais-1` diventa `fitvais-2`.
-3. Lancia `./deploy.sh`.
+2. Incrementa la costante `VERSIONE` in cima a `sw.js`: `fitvais-2` diventa `fitvais-3`.
+3. Pubblica: `git push` con GitHub Pages, `./deploy.sh` con Cloudflare.
 
 Senza il passo 2 il telefono continua a servire la versione vecchia dalla cache.
 Dopo il passo 3, sul telefono compare in basso "Versione nuova disponibile" con
