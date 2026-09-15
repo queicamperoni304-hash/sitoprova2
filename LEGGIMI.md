@@ -81,3 +81,8 @@ disinstalli l'app, spariscono.
 
 Esportali ogni tanto: Impostazioni, "Esporta JSON". Il file si rimette dentro con
 "Importa JSON".
+
+Il file esportato non contiene la chiave API: quella resta su questo telefono e
+non viaggia mai. Anche importando un file che ne contiene una, il telefono tiene
+la sua. Se ripristini su un telefono nuovo, la chiave la riscrivi a mano una
+volta.

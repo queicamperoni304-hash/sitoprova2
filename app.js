@@ -1621,7 +1621,7 @@ function disegnaImpostazioni() {
   const dati = elemento('div', 'sezione');
   dati.appendChild(elemento('p', 'etichetta', 'Dati'));
   dati.appendChild(elemento('p', 'riga-dettaglio',
-    'I dati stanno solo su questo telefono. Esportali ogni tanto.'));
+    'I dati stanno solo su questo telefono. Esportali ogni tanto. Il file non contiene la chiave API: quella resta qui.'));
 
   const esporta = elemento('button', 'pulsante pulsante-concluso', 'Esporta JSON');
   esporta.type = 'button';
@@ -1672,9 +1672,16 @@ function messaggioDati(testo, errore) {
   esito.hidden = false;
 }
 
+// La chiave API non viaggia mai in un file: resta su questo telefono.
+function datiEsportabili() {
+  const copia = JSON.parse(JSON.stringify(stato));
+  if (copia.impostazioni) copia.impostazioni.chiaveApi = '';
+  return copia;
+}
+
 function esportaDati() {
   try {
-    const contenuto = JSON.stringify(stato, null, 2);
+    const contenuto = JSON.stringify(datiEsportabili(), null, 2);
     const blob = new Blob([contenuto], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const collegamento = document.createElement('a');
@@ -1699,8 +1706,11 @@ function importaDati(file) {
         throw new Error('formato');
       }
       if (!confirm('Sostituisci i dati di questo telefono con quelli del file?')) return;
+      // La chiave del telefono resta la sua: quella del file, se c'è, si ignora.
+      const chiaveDelTelefono = stato.impostazioni.chiaveApi || '';
       stato = Object.assign(statoIniziale(), letto);
       stato.impostazioni = Object.assign({ chiaveApi: '', modello: 'claude-sonnet-5' }, letto.impostazioni || {});
+      stato.impostazioni.chiaveApi = chiaveDelTelefono;
       salva();
       esercizioCurve = null;
       messaggioDati('Importato. ' + formattaNumero(sessioniChiuse().length) + ' allenamenti.', false);
