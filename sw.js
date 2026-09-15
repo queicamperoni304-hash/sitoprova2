@@ -2,7 +2,7 @@
    Rete prima, ricaduta sulla cache: online vedi subito le modifiche, offline funziona lo stesso.
    Cambia VERSIONE a ogni pubblicazione: la cache vecchia si cancella. */
 
-const VERSIONE = 'fitvais-2';
+const VERSIONE = 'fitvais-3';
 
 const RISORSE = [
   './',
@@ -12,6 +12,7 @@ const RISORSE = [
   './stile.css',
   './manifest.webmanifest',
   './icona-192.png',
+  './icona-apple-180.png',
   './icona-512.png',
   './icona-maskable-512.png',
   'https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700&display=swap'
