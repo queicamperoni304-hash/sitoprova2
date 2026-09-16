@@ -21,6 +21,16 @@ mezzanotte, con il conteggio del giorno e gli ultimi sette giorni sotto.
 L'elenco sta in cima ad `app.js`, nella costante `INTEGRATORI`: per aggiungere
 o togliere qualcosa si modifica lì.
 
+## Curve: gruppi ed esercizi
+
+Due viste. **Gruppi** risponde alla domanda "sto allenando tutto?": serie a
+settimana per gruppo muscolare sulle ultime quattro settimane, confronto con le
+quattro precedenti e giorni dall'ultima volta che hai toccato quel gruppo. Il
+gruppo lo prende dalla scheda; per gli esercizi inventati sul momento lo deduce
+dal nome (la tabella `INDIZI_GRUPPO` in `app.js`).
+
+**Esercizi** è la vista di prima: massimale stimato, volume, record.
+
 ## Spiegazione degli esercizi
 
 Tocca il nome di un esercizio, in Oggi o in Scheda, e si apre una scheda che lo

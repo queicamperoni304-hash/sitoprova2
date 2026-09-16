@@ -120,6 +120,7 @@ function statoIniziale() {
 let stato = statoIniziale();
 let schermataAttiva = 'oggi';
 let esercizioCurve = null;
+let vistaCurve = 'gruppi';
 
 function carica() {
   try {
@@ -1230,6 +1231,113 @@ function disegnaEsercizioScheda(giornata, esercizio) {
   return blocco;
 }
 
+/* ---------- Gruppi muscolari ---------- */
+
+// L'ordine conta: le chiavi più specifiche prima, o "leg curl" finisce nei bicipiti
+// e "dip su panca" nel petto. Il gruppo scritto nella scheda vince su tutto.
+const INDIZI_GRUPPO = [
+  { gruppo: 'Tricipiti', chiavi: ['dip su panca', 'panca stretta', 'pushdown', 'push down', 'french', 'tricip', 'kickback', 'estensione gomit'] },
+  { gruppo: 'Gambe', chiavi: ['leg extension', 'leg curl', 'leg press', 'pressa', 'squat', 'affond', 'bulgar', 'stacco', 'hip thrust', 'polpacc', 'calf', 'adduttor', 'abduttor', 'pendulum', 'gamb', 'quadricip', 'femoral', 'glute'] },
+  { gruppo: 'Addome', chiavi: ['crunch', 'plank', 'leg raise', 'barchetta', 'addom', 'core', 'russian twist', 'sit up'] },
+  { gruppo: 'Posteriori', chiavi: ['face pull', 'reverse pec', 'posterior', 'rear delt'] },
+  { gruppo: 'Spalle', chiavi: ['alzate lateral', 'alzata lateral', 'shoulder press', 'lento avanti', 'military', 'arnold', 'deltoide frontale', 'spalle', 'press machine', 'spinte sopra'] },
+  { gruppo: 'Bicipiti', chiavi: ['curl', 'scott', 'hammer', 'bicip', 'spider'] },
+  { gruppo: 'Petto', chiavi: ['panca', 'croci', 'chest', 'pec deck', 'dip', 'spinta manubri', 'piegament', 'pettoral', 'pullover'] },
+  { gruppo: 'Dorso', chiavi: ['lat machine', 'lat pulldown', 'pulldown', 'rematore', 'low row', 'seal row', 'row', 'trazion', 'pull up', 'tirata dorsale', 'dorso', 'dorsal'] }
+];
+
+const ORDINE_GRUPPI = ['Petto', 'Dorso', 'Spalle', 'Posteriori', 'Gambe', 'Bicipiti', 'Tricipiti', 'Addome', 'Altro'];
+
+function senzaAccenti(testo) {
+  return String(testo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Il gruppo di un esercizio: quello scritto nella scheda, o dedotto dal nome.
+function gruppoDi(esercizio) {
+  const scritto = (esercizio.gruppo || '').trim();
+  if (scritto) {
+    const trovato = ORDINE_GRUPPI.filter(function (g) { return senzaAccenti(g) === senzaAccenti(scritto); })[0];
+    if (trovato) return trovato;
+  }
+  const nome = senzaAccenti(esercizio.nome);
+  for (let i = 0; i < INDIZI_GRUPPO.length; i++) {
+    const indizio = INDIZI_GRUPPO[i];
+    for (let k = 0; k < indizio.chiavi.length; k++) {
+      if (nome.indexOf(indizio.chiavi[k]) >= 0) return indizio.gruppo;
+    }
+  }
+  return 'Altro';
+}
+
+const GIORNO = 86400000;
+const FINESTRA = 28;
+
+// Serie per gruppo, confronto con il periodo prima e giorni dall'ultima volta.
+// Ogni serie conta una volta sola, sul gruppo principale dell'esercizio.
+function statistichePerGruppo() {
+  const chiuse = sessioniChiuse();
+  if (!chiuse.length) return { gruppi: [], settimane: 0, allenamentiSettimana: 0, serieSettimana: 0, confrontabile: false };
+
+  const adesso = Date.now();
+  const prima = new Date(chiuse[0].fine).getTime();
+  const giorniCoperti = Math.max(1, (adesso - prima) / GIORNO);
+  const settimaneRecenti = Math.max(1, Math.min(FINESTRA, giorniCoperti) / 7);
+  const giorniPrecedenti = Math.max(0, Math.min(FINESTRA, giorniCoperti - FINESTRA));
+  const settimanePrecedenti = giorniPrecedenti / 7;
+  const confrontabile = settimanePrecedenti >= 2;
+
+  const conti = {};
+  function riga(gruppo) {
+    if (!conti[gruppo]) conti[gruppo] = { gruppo: gruppo, recenti: 0, precedenti: 0, ultima: null, esercizi: {} };
+    return conti[gruppo];
+  }
+
+  let serieRecentiTotali = 0;
+  let allenamentiRecenti = 0;
+
+  chiuse.forEach(function (sessione) {
+    const quando = new Date(sessione.fine).getTime();
+    const giorniFa = (adesso - quando) / GIORNO;
+    const dentro = giorniFa <= FINESTRA;
+    const primaAncora = giorniFa > FINESTRA && giorniFa <= FINESTRA * 2;
+    if (dentro) allenamentiRecenti++;
+
+    (sessione.esercizi || []).forEach(function (esercizio) {
+      const quante = serieValide(esercizio).length;
+      if (!quante) return;
+      const gruppo = gruppoDi(esercizio);
+      const r = riga(gruppo);
+      if (dentro) { r.recenti += quante; serieRecentiTotali += quante; }
+      if (primaAncora) r.precedenti += quante;
+      if (!r.ultima || quando > r.ultima) r.ultima = quando;
+      r.esercizi[esercizio.nome] = (r.esercizi[esercizio.nome] || 0) + quante;
+    });
+  });
+
+  const gruppi = Object.keys(conti).map(function (nome) {
+    const r = conti[nome];
+    const principale = Object.keys(r.esercizi).sort(function (a, b) { return r.esercizi[b] - r.esercizi[a]; })[0];
+    return {
+      gruppo: nome,
+      serieSettimana: r.recenti / settimaneRecenti,
+      serieSettimanaPrima: confrontabile ? r.precedenti / settimanePrecedenti : null,
+      serieRecenti: r.recenti,
+      giorniDaUltima: r.ultima ? Math.floor((adesso - r.ultima) / GIORNO) : null,
+      esercizioPrincipale: principale
+    };
+  }).sort(function (a, b) {
+    return ORDINE_GRUPPI.indexOf(a.gruppo) - ORDINE_GRUPPI.indexOf(b.gruppo);
+  });
+
+  return {
+    gruppi: gruppi,
+    settimane: settimaneRecenti,
+    allenamentiSettimana: allenamentiRecenti / settimaneRecenti,
+    serieSettimana: serieRecentiTotali / settimaneRecenti,
+    confrontabile: confrontabile
+  };
+}
+
 /* ---------- Grafici in SVG, disegnati a mano ---------- */
 
 const NS_SVG = 'http://www.w3.org/2000/svg';
@@ -1370,6 +1478,83 @@ function graficoBarre(punti, colore, descrizione) {
   return svg;
 }
 
+// Barre orizzontali: una misura sola, un colore solo, valore in punta.
+function graficoBarreOrizzontali(voci, colore, riferimenti, descrizione) {
+  const passoRiga = 30;
+  const spessore = 16;
+  const sinistra = 92;
+  const destra = 34;
+  const alto = 16;
+  const altezza = alto + voci.length * passoRiga + 14;
+
+  const svg = nodoSvg('svg', {
+    viewBox: '0 0 ' + LARGHEZZA + ' ' + altezza,
+    class: 'grafico',
+    role: 'img',
+    preserveAspectRatio: 'xMidYMid meet'
+  });
+  svg.appendChild(nodoSvg('title')).textContent = descrizione || '';
+
+  const massimoDati = Math.max.apply(null, voci.map(function (v) { return v.valore; }).concat([0]));
+  const tetto = Math.max(massimoDati * 1.15, (riferimenti[riferimenti.length - 1] || 10) * 1.2, 1);
+  const area = LARGHEZZA - sinistra - destra;
+  const scala = function (valore) { return (valore / tetto) * area; };
+
+  // Riferimenti: telaio d'acciaio, dietro alle barre.
+  riferimenti.forEach(function (valore) {
+    const x = sinistra + scala(valore);
+    svg.appendChild(nodoSvg('line', {
+      x1: x, x2: x, y1: alto - 8, y2: altezza - 16,
+      stroke: ACCIAIO, 'stroke-width': 1, opacity: 0.35
+    }));
+    const etichetta = nodoSvg('text', {
+      x: x, y: altezza - 4, fill: GESSO_SECONDARIO,
+      'font-size': 10, 'text-anchor': 'middle', 'font-family': 'Chivo, sans-serif'
+    });
+    etichetta.textContent = formattaNumero(valore);
+    svg.appendChild(etichetta);
+  });
+
+  voci.forEach(function (voce, indice) {
+    const y = alto + indice * passoRiga;
+
+    const nome = nodoSvg('text', {
+      x: 0, y: y + spessore - 3, fill: '#F2EFE8',
+      'font-size': 12, 'font-family': 'Chivo, sans-serif'
+    });
+    nome.textContent = voce.etichetta;
+    svg.appendChild(nome);
+
+    const lunghezza = scala(voce.valore);
+    if (lunghezza > 0.5) {
+      svg.appendChild(nodoSvg('path', {
+        d: barraTonda(sinistra, y, lunghezza, spessore, 4),
+        fill: colore
+      }));
+    }
+
+    const valore = nodoSvg('text', {
+      x: sinistra + lunghezza + 8, y: y + spessore - 3, fill: '#F2EFE8',
+      'font-size': 13, 'font-family': 'Anton, sans-serif'
+    });
+    valore.textContent = formattaNumero(voce.valore, 1);
+    svg.appendChild(valore);
+  });
+
+  return svg;
+}
+
+// Estremità arrotondata solo in punta: alla base la barra resta squadrata.
+function barraTonda(x, y, larghezza, altezza, raggio) {
+  const r = Math.max(0, Math.min(raggio, larghezza));
+  return 'M' + x + ' ' + y +
+    'H' + (x + larghezza - r) +
+    'a' + r + ' ' + r + ' 0 0 1 ' + r + ' ' + r +
+    'V' + (y + altezza - r) +
+    'a' + r + ' ' + r + ' 0 0 1 ' + (-r) + ' ' + r +
+    'H' + x + 'Z';
+}
+
 /* ---------- Curve ---------- */
 
 function disegnaCurve() {
@@ -1383,6 +1568,94 @@ function disegnaCurve() {
     return;
   }
 
+  const commutatore = elemento('div', 'selettore');
+  [['gruppi', 'Gruppi'], ['esercizi', 'Esercizi']].forEach(function (vista) {
+    const voce = elemento('button', 'voce-selettore' + (vistaCurve === vista[0] ? ' attiva' : ''), vista[1]);
+    voce.type = 'button';
+    voce.addEventListener('click', function () {
+      vistaCurve = vista[0];
+      disegnaCurve();
+    });
+    commutatore.appendChild(voce);
+  });
+  corpo.appendChild(commutatore);
+
+  if (vistaCurve === 'gruppi') disegnaVistaGruppi(corpo);
+  else disegnaVistaEsercizi(corpo);
+}
+
+// Quanto lavoro fa ogni gruppo, e da quanto non lo tocchi.
+function disegnaVistaGruppi(corpo) {
+  const dati = statistichePerGruppo();
+
+  if (!dati.gruppi.length) {
+    corpo.appendChild(elemento('p', 'vuoto', 'Nessuna serie registrata nelle sessioni chiuse.'));
+    return;
+  }
+
+  const riepilogo = elemento('div', 'riepilogo');
+  const sinistra = elemento('div');
+  sinistra.appendChild(elemento('p', 'etichetta', 'Serie a settimana'));
+  sinistra.appendChild(elemento('span', 'numero numero-grande', formattaNumero(dati.serieSettimana, 0)));
+  riepilogo.appendChild(sinistra);
+  const destra = elemento('div');
+  destra.appendChild(elemento('p', 'etichetta', 'Allenamenti a settimana'));
+  destra.appendChild(elemento('span', 'numero numero-grande', formattaNumero(dati.allenamentiSettimana, 1)));
+  riepilogo.appendChild(destra);
+  corpo.appendChild(riepilogo);
+
+  const sezione = elemento('div', 'sezione');
+  sezione.appendChild(elemento('p', 'etichetta', 'Serie a settimana per gruppo'));
+  sezione.appendChild(graficoBarreOrizzontali(
+    dati.gruppi.map(function (g) { return { etichetta: g.gruppo, valore: g.serieSettimana }; }),
+    BLU, [10, 20], 'Serie settimanali per gruppo muscolare'));
+  sezione.appendChild(elemento('p', 'nota-esercizio',
+    'Le due righe d\u2019acciaio sono 10 e 20 serie: la fascia che gli studi sull\u2019ipertrofia usano come riferimento comune. \u00C8 un riferimento, non una prescrizione.'));
+  corpo.appendChild(sezione);
+
+  const elenco = elemento('div', 'sezione');
+  elenco.appendChild(elemento('p', 'etichetta',
+    dati.confrontabile ? 'Per gruppo, contro le quattro settimane prima' : 'Dettaglio per gruppo'));
+
+  dati.gruppi.forEach(function (gruppo) {
+    const riga = elemento('div', 'riga');
+    const testo = elemento('div');
+    testo.appendChild(elemento('div', 'riga-titolo', gruppo.gruppo));
+
+    const dettagli = [];
+    if (gruppo.giorniDaUltima === 0) dettagli.push('oggi');
+    else if (gruppo.giorniDaUltima === 1) dettagli.push('ieri');
+    else if (gruppo.giorniDaUltima !== null) dettagli.push(formattaNumero(gruppo.giorniDaUltima) + ' giorni fa');
+    if (gruppo.esercizioPrincipale) dettagli.push(gruppo.esercizioPrincipale);
+    testo.appendChild(elemento('div', 'riga-dettaglio', dettagli.join(' \u00B7 ')));
+
+    if (gruppo.serieSettimanaPrima !== null) {
+      const differenza = gruppo.serieSettimana - gruppo.serieSettimanaPrima;
+      const variazione = elemento('div', 'riga-dettaglio');
+      if (differenza <= -1) {
+        variazione.className = 'riga-dettaglio testo-rosso';
+        variazione.textContent = '\u2212' + formattaNumero(Math.abs(differenza), 1) + ' serie a settimana';
+      } else if (differenza >= 1) {
+        variazione.textContent = '+' + formattaNumero(differenza, 1) + ' serie a settimana';
+      } else {
+        variazione.textContent = 'stabile';
+      }
+      testo.appendChild(variazione);
+    }
+
+    riga.appendChild(testo);
+    riga.appendChild(elemento('span', 'numero numero-grande', formattaNumero(gruppo.serieSettimana, 1)));
+    elenco.appendChild(riga);
+  });
+
+  elenco.appendChild(elemento('p', 'nota-esercizio',
+    'Contano solo le serie spuntate, e ogni serie pesa una volta sola sul gruppo principale dell\u2019esercizio: la panca non conta anche per i tricipiti.' +
+    (dati.confrontabile ? '' : ' Per il confronto con il periodo prima servono almeno sei settimane di storico.')));
+  corpo.appendChild(elenco);
+}
+
+function disegnaVistaEsercizi(corpo) {
+  const chiuse = sessioniChiuse();
   const esercizi = eserciziPerQuantitaDati();
   if (!esercizi.length) {
     corpo.appendChild(elemento('p', 'vuoto', 'Nessuna serie registrata nelle sessioni chiuse.'));

@@ -121,10 +121,6 @@ main {
   margin-bottom: 8px;
 }
 
-.testo-secondario { color: var(--gesso-secondario); }
-.testo-verde { color: var(--verde); }
-.testo-rosso { color: var(--rosso); }
-
 .vuoto {
   color: var(--gesso-secondario);
   padding: 10px 0 2px;
@@ -709,3 +705,8 @@ button.nome-toccabile {
 /* Le azioni scendono in fondo alla schermata (dopo .sezione, così vince su quella regola). */
 .sezione.azioni-fondo,
 .azioni-fondo { margin-top: auto; padding-top: 28px; }
+
+/* Colori di stato: in fondo, così vincono sulle regole dei componenti. */
+.testo-secondario { color: var(--gesso-secondario); }
+.testo-verde { color: var(--verde); }
+.testo-rosso { color: var(--rosso); }
