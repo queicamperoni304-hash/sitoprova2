@@ -281,6 +281,30 @@ function ultimeSerie(nome) {
   return [];
 }
 
+// L'ultima volta che hai fatto questo esercizio: quando, e con quali carichi.
+function ultimaVolta(nome) {
+  const chiuse = sessioniChiuse();
+  for (let i = chiuse.length - 1; i >= 0; i--) {
+    const trovato = (chiuse[i].esercizi || []).filter(function (e) {
+      return e.nome === nome && serieValide(e).length > 0;
+    })[0];
+    if (trovato) return { data: chiuse[i].fine, serie: serieValide(trovato) };
+  }
+  return null;
+}
+
+// "4 serie da 100 × 5" quando sono tutte uguali, altrimenti l'elenco.
+function serieInParole(serie) {
+  const scritte = serie.map(function (s) {
+    return formattaCarico(s.carico) + ' × ' + formattaNumero(s.ripetizioni);
+  });
+  const tutteUguali = scritte.every(function (s) { return s === scritte[0]; });
+  if (tutteUguali && scritte.length > 1) {
+    return formattaNumero(scritte.length) + ' serie da ' + scritte[0];
+  }
+  return scritte.join(' · ');
+}
+
 // Record: massimale stimato più alto fra le sessioni chiuse.
 function recordEsercizio(nome) {
   let massimo = 0;
@@ -817,6 +841,17 @@ function disegnaEsercizio(esercizio) {
 
   blocco.appendChild(sottoBarra(esercizio));
 
+  const precedente = ultimaVolta(esercizio.nome);
+  const riferimento = elemento('p', 'storico-esercizio');
+  if (precedente) {
+    riferimento.appendChild(elemento('span', 'etichetta-storico', 'Ultima volta, ' + dataBreve(precedente.data)));
+    riferimento.appendChild(document.createTextNode(serieInParole(precedente.serie)));
+  } else {
+    riferimento.className = 'storico-esercizio testo-secondario';
+    riferimento.textContent = 'Prima volta: nessuno storico per questo esercizio.';
+  }
+  blocco.appendChild(riferimento);
+
   const record = recordEsercizio(esercizio.nome);
 
   esercizio.serie.forEach(function (serie, indice) {
@@ -840,23 +875,19 @@ function disegnaEsercizio(esercizio) {
   azioniEsercizio.appendChild(pulsanteSpiega(esercizio));
   blocco.appendChild(azioniEsercizio);
 
-  // Confronto con l'ultima volta: cala, uguaglia, supera.
-  const precedenti = ultimeSerie(esercizio.nome);
-  if (precedenti.length) {
-    const massimoPrecedente = precedenti.reduce(function (massimo, s) {
+  // Un calo va detto: il resto lo leggi già nella riga sopra le serie.
+  if (precedente) {
+    const massimoPrecedente = precedente.serie.reduce(function (massimo, s) {
       return Math.max(massimo, massimaleStimato(s.carico, s.ripetizioni));
     }, 0);
     const massimoAdesso = serieValide(esercizio).reduce(function (massimo, s) {
       return Math.max(massimo, massimaleStimato(s.carico, s.ripetizioni));
     }, 0);
-    const nota = elemento('div', 'riga-dettaglio');
     if (massimoAdesso > 0 && massimoAdesso < massimoPrecedente * 0.97) {
-      nota.className = 'riga-dettaglio testo-rosso';
-      nota.textContent = 'In calo sull’ultima volta: ' + formattaNumero(massimoPrecedente, 1) + ' kg stimati';
-    } else {
-      nota.textContent = 'Ultima volta: ' + formattaNumero(massimoPrecedente, 1) + ' kg stimati';
+      blocco.appendChild(elemento('div', 'riga-dettaglio testo-rosso',
+        'In calo sull\u2019ultima volta: ' + formattaNumero(massimoPrecedente, 1) + ' kg stimati contro ' +
+        formattaNumero(massimoAdesso, 1) + ' di oggi.'));
     }
-    blocco.appendChild(nota);
   }
 
   if (record.valore > 0) {

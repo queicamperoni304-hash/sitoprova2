@@ -342,6 +342,21 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   font-size: 15px;
 }
 
+.storico-esercizio {
+  font-size: 14px;
+  color: var(--gesso);
+  padding: 10px 0 2px;
+}
+
+.etichetta-storico {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gesso-secondario);
+  margin-bottom: 2px;
+}
+
 /* Spunta: unico elemento animato dell'app */
 .spunta {
   width: var(--tocco);

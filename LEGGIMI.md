@@ -2,6 +2,10 @@
 
 Registro di allenamenti di forza. Funziona offline, i dati restano sul telefono.
 
+Sopra le serie di ogni esercizio c'è scritto cosa avevi fatto l'ultima volta,
+con la data e i carichi veri; i campi arrivano già pieni con quei valori, così
+in palestra digiti solo ciò che cambia.
+
 Dentro c'è già la Scheda 5 giorni (Lun · Mar · Mer · Gio riposo · Ven · Sab),
 riportata come nel PDF originale: dove la prescrizione non c'era, l'app scrive
 "da definire" invece di inventare un numero. I carichi li scrivi tu la prima

@@ -2,7 +2,7 @@
    Rete prima, ricaduta sulla cache: online vedi subito le modifiche, offline funziona lo stesso.
    Cambia VERSIONE a ogni pubblicazione: la cache vecchia si cancella. */
 
-const VERSIONE = 'fitvais-8';
+const VERSIONE = 'fitvais-9';
 
 const RISORSE = [
   './',
