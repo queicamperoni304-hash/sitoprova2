@@ -8,6 +8,15 @@ riportata come nel PDF originale: dove la prescrizione non c'era, l'app scrive
 volta; dalla seconda in poi i campi arrivano già pieni con l'ultima volta.
 Se cancelli il programma, in Scheda trovi il pulsante per rimetterlo.
 
+## Integrazione
+
+In fondo a Oggi, sia prima sia durante l'allenamento: Omega 3 mattina e sera,
+multivitaminico una volta, creatina mattina e sera. Cinque spunte che si
+azzerano da sole a mezzanotte; lo storico dei giorni passati resta salvato.
+
+L'elenco sta in cima ad `app.js`, nella costante `INTEGRATORI`: per aggiungere
+o togliere qualcosa si modifica lì.
+
 ## Spiegazione degli esercizi
 
 Tocca il nome di un esercizio, in Oggi o in Scheda, e si apre una scheda che lo

@@ -17,6 +17,15 @@ const ROSSO = '#EE5A4C';
 const ACCIAIO = '#C9C3B6';
 const GESSO_SECONDARIO = '#9C9589';
 
+// Integrazione: cosa prendi e quando. I momenti sono le colonne delle spunte.
+const INTEGRATORI = [
+  { id: 'omega3', nome: 'Omega 3', momenti: ['mattina', 'sera'] },
+  { id: 'multivitaminico', nome: 'Multivitaminico', momenti: ['mattina'], nota: 'Una volta al giorno' },
+  { id: 'creatina', nome: 'Creatina', momenti: ['mattina', 'sera'] }
+];
+
+const MOMENTI = ['mattina', 'sera'];
+
 /* ---------- Utilità ---------- */
 
 const $ = (sel, radice) => (radice || document).querySelector(sel);
@@ -63,6 +72,14 @@ function dataEstesa(iso) {
   return d.getDate() + ' ' + MESI[d.getMonth()] + ' ' + d.getFullYear();
 }
 
+// Il giorno secondo l'orologio del telefono, non secondo UTC.
+function chiaveGiorno(quando) {
+  const d = quando ? new Date(quando) : new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
 // Lunedì come primo giorno: chiave della settimana in formato ISO.
 function chiaveSettimana(iso) {
   const d = new Date(iso);
@@ -95,6 +112,7 @@ function statoIniziale() {
     impostazioni: { chiaveApi: '', modello: 'claude-sonnet-5' },
     coach: { testo: '', data: null },
     spiegazioni: {},
+    integrazione: {},
     ultimaChiusura: null
   };
 }
@@ -117,6 +135,8 @@ function carica() {
     stato.impostazioni = Object.assign({ chiaveApi: '', modello: 'claude-sonnet-5' }, letto.impostazioni || {});
     stato.coach = Object.assign({ testo: '', data: null }, letto.coach || {});
     if (!stato.spiegazioni || typeof stato.spiegazioni !== 'object') stato.spiegazioni = {};
+    if (!stato.integrazione || typeof stato.integrazione !== 'object') stato.integrazione = {};
+    potaIntegrazione();
     if (!Array.isArray(stato.programmi)) stato.programmi = [];
     if (!Array.isArray(stato.sessioni)) stato.sessioni = [];
   } catch (errore) {
@@ -407,6 +427,98 @@ function suona() {
   }
 }
 
+/* ---------- Integrazione ---------- */
+
+// Tiene gli ultimi quattro mesi: il resto è zavorra.
+function potaIntegrazione() {
+  const giorni = Object.keys(stato.integrazione).sort();
+  while (giorni.length > 120) delete stato.integrazione[giorni.shift()];
+}
+
+function presiOggi() {
+  return stato.integrazione[chiaveGiorno()] || {};
+}
+
+function segnaPreso(idIntegratore, momento, preso) {
+  const giorno = chiaveGiorno();
+  if (!stato.integrazione[giorno]) stato.integrazione[giorno] = {};
+  const chiave = idIntegratore + ':' + momento;
+  if (preso) stato.integrazione[giorno][chiave] = true;
+  else delete stato.integrazione[giorno][chiave];
+  if (!Object.keys(stato.integrazione[giorno]).length) delete stato.integrazione[giorno];
+  potaIntegrazione();
+  salva();
+}
+
+function doseTotali() {
+  return INTEGRATORI.reduce(function (somma, i) { return somma + i.momenti.length; }, 0);
+}
+
+function dosePrese() {
+  const oggi = presiOggi();
+  return INTEGRATORI.reduce(function (somma, integratore) {
+    return somma + integratore.momenti.filter(function (momento) {
+      return oggi[integratore.id + ':' + momento];
+    }).length;
+  }, 0);
+}
+
+function disegnaIntegrazione() {
+  const sezione = elemento('div', 'sezione');
+
+  const testa = elemento('div', 'esercizio-testa');
+  testa.appendChild(elemento('p', 'etichetta', 'Integrazione'));
+  const conteggio = elemento('span', 'riga-dettaglio conteggio-integrazione',
+    formattaNumero(dosePrese()) + ' su ' + formattaNumero(doseTotali()));
+  testa.appendChild(conteggio);
+  sezione.appendChild(testa);
+
+  sezione.appendChild(elemento('div', 'barra'));
+
+  const intestazione = elemento('div', 'riga-integratore intestazione-integrazione');
+  intestazione.appendChild(elemento('span', null, ''));
+  MOMENTI.forEach(function (momento) {
+    intestazione.appendChild(elemento('span', 'etichetta', momento));
+  });
+  sezione.appendChild(intestazione);
+
+  const oggi = presiOggi();
+
+  INTEGRATORI.forEach(function (integratore) {
+    const riga = elemento('div', 'riga-integratore');
+
+    const sinistra = elemento('div');
+    sinistra.appendChild(elemento('div', 'integratore-nome', integratore.nome));
+    if (integratore.nota) sinistra.appendChild(elemento('div', 'riga-dettaglio', integratore.nota));
+    riga.appendChild(sinistra);
+
+    MOMENTI.forEach(function (momento) {
+      if (integratore.momenti.indexOf(momento) < 0) {
+        riga.appendChild(elemento('span', null, ''));
+        return;
+      }
+      const preso = !!oggi[integratore.id + ':' + momento];
+      const spunta = elemento('button', 'spunta' + (preso ? ' fatta' : ''));
+      spunta.type = 'button';
+      spunta.setAttribute('aria-pressed', preso ? 'true' : 'false');
+      spunta.setAttribute('aria-label', integratore.nome + ', ' + momento);
+      spunta.appendChild(elemento('span', 'spunta-cerchio'));
+      spunta.addEventListener('click', function () {
+        const adesso = !spunta.classList.contains('fatta');
+        spunta.classList.toggle('fatta', adesso);
+        spunta.setAttribute('aria-pressed', adesso ? 'true' : 'false');
+        segnaPreso(integratore.id, momento, adesso);
+        conteggio.textContent = formattaNumero(dosePrese()) + ' su ' + formattaNumero(doseTotali());
+      });
+      riga.appendChild(spunta);
+    });
+
+    sezione.appendChild(riga);
+  });
+
+  return sezione;
+}
+
 /* ---------- Oggi ---------- */
 
 function programmaAttivo() {
@@ -547,6 +659,8 @@ function disegnaAvvio(corpo) {
     corpo.appendChild(storico);
   }
 
+  corpo.appendChild(disegnaIntegrazione());
+
   const azioni = elemento('div', 'sezione azioni-fondo');
   const avvia = elemento('button', 'pulsante pulsante-principale', 'Vai');
   avvia.type = 'button';
@@ -612,6 +726,8 @@ function disegnaSessioneInCorso(corpo) {
   });
   note.appendChild(area);
   corpo.appendChild(note);
+
+  corpo.appendChild(disegnaIntegrazione());
 
   // Volume e chiusura
   const riepilogo = elemento('div', 'riepilogo');
