@@ -318,7 +318,7 @@ function coloreEsercizio(nome) {
 
 function mostraSchermata(nome) {
   schermataAttiva = nome;
-  ['oggi', 'scheda', 'curve', 'coach'].forEach(function (s) {
+  ['oggi', 'scheda', 'curve', 'integrazione', 'coach'].forEach(function (s) {
     $('#schermata-' + s).classList.toggle('attiva', s === nome);
   });
   Array.prototype.forEach.call(document.querySelectorAll('.voce-nav'), function (voce) {
@@ -332,6 +332,7 @@ function disegna() {
   if (schermataAttiva === 'oggi') disegnaOggi();
   if (schermataAttiva === 'scheda') disegnaScheda();
   if (schermataAttiva === 'curve') disegnaCurve();
+  if (schermataAttiva === 'integrazione') disegnaIntegrazione();
   if (schermataAttiva === 'coach') disegnaCoach();
 }
 
@@ -464,10 +465,13 @@ function dosePrese() {
 }
 
 function disegnaIntegrazione() {
-  const sezione = elemento('div', 'sezione');
+  const corpo = $('#corpo-integrazione');
+  svuota(corpo);
+
+  const sezione = elemento('div');
 
   const testa = elemento('div', 'esercizio-testa');
-  testa.appendChild(elemento('p', 'etichetta', 'Integrazione'));
+  testa.appendChild(elemento('p', 'etichetta', dataEstesa(new Date().toISOString())));
   const conteggio = elemento('span', 'riga-dettaglio conteggio-integrazione',
     formattaNumero(dosePrese()) + ' su ' + formattaNumero(doseTotali()));
   testa.appendChild(conteggio);
@@ -516,7 +520,35 @@ function disegnaIntegrazione() {
     sezione.appendChild(riga);
   });
 
-  return sezione;
+  corpo.appendChild(sezione);
+  corpo.appendChild(disegnaStoricoIntegrazione());
+}
+
+// Gli ultimi sette giorni, zeri compresi: i buchi sono il dato.
+function disegnaStoricoIntegrazione() {
+  const storico = elemento('div', 'sezione');
+  storico.appendChild(elemento('p', 'etichetta', 'Ultimi sette giorni'));
+
+  const totale = doseTotali();
+  for (let scarto = 6; scarto >= 0; scarto--) {
+    const quando = new Date();
+    quando.setDate(quando.getDate() - scarto);
+    const giorno = stato.integrazione[chiaveGiorno(quando)] || {};
+    const prese = INTEGRATORI.reduce(function (somma, integratore) {
+      return somma + integratore.momenti.filter(function (momento) {
+        return giorno[integratore.id + ':' + momento];
+      }).length;
+    }, 0);
+
+    const riga = elemento('div', 'riga');
+    riga.appendChild(elemento('span', 'riga-titolo', scarto === 0 ? 'Oggi' : dataEstesa(quando.toISOString())));
+    const valore = elemento('span', 'numero numero-medio', formattaNumero(prese) + ' / ' + formattaNumero(totale));
+    if (prese === 0) valore.className += ' testo-secondario';
+    riga.appendChild(valore);
+    storico.appendChild(riga);
+  }
+
+  return storico;
 }
 
 /* ---------- Oggi ---------- */
@@ -659,8 +691,6 @@ function disegnaAvvio(corpo) {
     corpo.appendChild(storico);
   }
 
-  corpo.appendChild(disegnaIntegrazione());
-
   const azioni = elemento('div', 'sezione azioni-fondo');
   const avvia = elemento('button', 'pulsante pulsante-principale', 'Vai');
   avvia.type = 'button';
@@ -726,8 +756,6 @@ function disegnaSessioneInCorso(corpo) {
   });
   note.appendChild(area);
   corpo.appendChild(note);
-
-  corpo.appendChild(disegnaIntegrazione());
 
   // Volume e chiusura
   const riepilogo = elemento('div', 'riepilogo');

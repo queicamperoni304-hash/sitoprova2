@@ -10,9 +10,9 @@ Se cancelli il programma, in Scheda trovi il pulsante per rimetterlo.
 
 ## Integrazione
 
-In fondo a Oggi, sia prima sia durante l'allenamento: Omega 3 mattina e sera,
-multivitaminico una volta, creatina mattina e sera. Cinque spunte che si
-azzerano da sole a mezzanotte; lo storico dei giorni passati resta salvato.
+Schermata sua, nella barra in basso: Omega 3 mattina e sera, multivitaminico
+una volta, creatina mattina e sera. Cinque spunte che si azzerano da sole a
+mezzanotte, con il conteggio del giorno e gli ultimi sette giorni sotto.
 
 L'elenco sta in cima ad `app.js`, nella costante `INTEGRATORI`: per aggiungere
 o togliere qualcosa si modifica lì.
